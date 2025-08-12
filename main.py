@@ -60,5 +60,17 @@ async def uncode(ctx):
     if role:
         await ctx.author.remove_roles(role)
         await ctx.send(f'{ctx.author.mention} ja no és un {coder_role}')
+    else:
+        await ctx.send("El rol no existeix")
+        
+@bot.command()
+async def poll(ctx, *, question):
+    embed = discord.Embed(title='New Poll', description=question)
+    poll_message = await ctx.send(embed=embed)
+    await poll_message.add_reaction('👍')
+    await poll_message.add_reaction('👎')
+
+
+
 
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)

@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "discord.py",
-    "python-dotenv"
+    "python-dotenv",
+    "yt-dlp>=2025.8.11",
 ]
