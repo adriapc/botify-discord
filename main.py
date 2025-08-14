@@ -75,9 +75,7 @@ async def on_message(message):
     
     # Generate response and send it
     response = generate_response(message.content)
-    
-    await message.channel.send(response)
-            
+    await message.channel.send(response)     
     await bot.process_commands(message)
         
 # Assign role     
