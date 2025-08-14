@@ -125,7 +125,17 @@ async def get_datetime(interaction: discord.Interaction):
     await interaction.response.defer()
     now = datetime.now()
     formatted_time = now.strftime("%H:%M %d-%m-%Y")
+    print(interaction.user.roles)
     await interaction.followup.send(f'{formatted_time}')
+
+@bot.tree.command(name='clear-chat', description='Delete all messages in the channel', guild=GUILD_ID)
+async def delete_messages(interaction: discord.Interaction):
+    await interaction.response.defer()
+    if 'admin' in str(interaction.user.roles):
+        await interaction.channel.purge()
+        await interaction.followup.send('Chat cleared!')
+    else:
+        await interaction.followup.send('You do not have permission to do that')
 
 # Play a song or add it to the queue
 @bot.tree.command(name='play', description='Play a song or add it to the queue', guild=GUILD_ID)
