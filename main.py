@@ -133,12 +133,11 @@ async def get_datetime(interaction: discord.Interaction):
 async def play(interaction: discord.Interaction, song_query: str):
     await interaction.response.defer()
 
-    voice_channel = interaction.user.voice.channel
-
-    if voice_channel is None:
+    if not interaction.user.voice or not interaction.user.voice.channel:
         await interaction.followup.send("You must be in a voice channel")
         return
     
+    voice_channel = interaction.user.voice.channel
     voice_client = interaction.guild.voice_client
     
     # Bot connects to voice channel
@@ -158,7 +157,7 @@ async def play(interaction: discord.Interaction, song_query: str):
     results = await search_ytdlp_async(query, ydl_options)
     tracks = results.get('entries', [])
 
-    if tracks is None:
+    if not tracks:
         await interaction.followup.send("No results found")
         return
     
@@ -175,17 +174,9 @@ async def play(interaction: discord.Interaction, song_query: str):
     if voice_client.is_playing() or voice_client.is_paused():
         await interaction.followup.send(f'{title} added to queue')
     else:
-        await interaction.followup.send(f'{title} is playing')
+        await interaction.followup.send(f'Botify connected!')
         await play_next_song(voice_client, guild_id, interaction.channel)
     
-    ffmpeg_options = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-        'options': '-vn -c:a libopus -b:a 96k',
-    }
-    
-    source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="bin\\ffmpeg\\ffmpeg.exe")
-    
-    voice_client.play(source)
 
 # Skip current song
 @bot.tree.command(name='skip', description='Skip the current song', guild=GUILD_ID)
@@ -193,7 +184,7 @@ async def skip(interaction: discord.Interaction):
     await interaction.response.defer()
     if interaction.guild.voice_client and (interaction.guild.voice_client.is_playing() or interaction.guild.voice_client.is_paused()):
         interaction.guild.voice_client.stop()
-        await interaction.followup.send('Skipped the current song')
+        await interaction.followup.send('⏭Skipped the current song')
     else:
         await interaction.followup.send('Nothing to skip')
 
@@ -209,7 +200,7 @@ async def pause(interaction: discord.Interaction):
         return await interaction.response.send_message("Nothing is being played")
 
     voice_client.pause()
-    await interaction.response.send_message('Song paused')
+    await interaction.response.send_message('⏸Song paused')
 
 # Resume the song
 @bot.tree.command(name="resume", description="Resume the currently paused song", guild=GUILD_ID)
@@ -226,7 +217,7 @@ async def resume(interaction: discord.Interaction):
     
     # Resume playback
     voice_client.resume()
-    await interaction.response.send_message("Song resumed!")
+    await interaction.response.send_message("▶Song resumed")
 
 # Stop the playback
 @bot.tree.command(name="stop", description="Stop playback and clear the queue", guild=GUILD_ID)
@@ -270,7 +261,7 @@ async def play_next_song(voice_client, guild_id, channel):
             asyncio.run_coroutine_threadsafe(play_next_song(voice_client, guild_id, channel), bot.loop)
         
         voice_client.play(source, after=after_play)
-        asyncio.create_task(channel.send(f'{title} is playing'))
+        asyncio.create_task(channel.send(f'▶ {title} is playing'))
         
     else:
         await voice_client.disconnect()
