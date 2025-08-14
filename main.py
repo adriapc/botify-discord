@@ -1,5 +1,6 @@
 import asyncio
 from collections import deque
+from datetime import datetime
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -10,9 +11,12 @@ import os
 import yt_dlp
 
 load_dotenv()
+
+guild_id = int(os.getenv('GUILD_ID'))
+
 DC_TOKEN = os.getenv('DISCORD_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_TOKEN')
-GUILD_ID = discord.Object(id=os.getenv('GUILD_ID'))
+GUILD_ID = discord.Object(id=guild_id)
 
 SONG_QUEUES = {}
 
@@ -23,18 +27,19 @@ async def search_ytdlp_async(query, ydl_opts):
 def _extract(query, ydl_opts):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(query, download=False)
+               
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-    
+
+# Set-up the bot
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 client = OpenAI(api_key=OPENAI_KEY)
 
-coder_role = 'Coder'
-
+# Generate response with gpt-4o-mini
 def generate_response(msg):
     instruction = '''You are an AI assistant, named Botify. Respond to the messages concretely, as short as possible'''
     body = client.responses.create(
@@ -46,13 +51,12 @@ def generate_response(msg):
     
     return body.output_text
 
-
-# Set-up the bot
+# Check is bot connects succesfully
 @bot.event
 async def on_ready():
-    print(f"{bot.user} is ready")
+    print(f"{bot.user.name} is ready")
     try:
-        guild = discord.Object(id=1404769845719072799)
+        guild = discord.Object(id=guild_id)
         synced = await bot.tree.sync(guild=guild)
         print(f"Synced {len(synced)} commands to guild {guild.id}")
     except Exception as e:
@@ -61,18 +65,15 @@ async def on_ready():
 # Bot reacts to events   
 @bot.event
 async def on_member_join(member):
-    await member.send(f'Benvingut a la comunitat, {member.name}')
-        
+    await member.send(f'Welcome to the server, {member.name}!')
+
+# Send a response to user messages        
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
     
-    ctx = await bot.get_context(message)
-    if ctx.valid:
-        await bot.process_commands(message)
-        return
-    
+    # Generate response and send it
     response = generate_response(message.content)
     
     await message.channel.send(response)
@@ -81,49 +82,54 @@ async def on_message(message):
         
 # Assign role     
 @bot.tree.command(name='assign', description='Assign a role', guild=GUILD_ID)
-@app_commands.describe(role_query='Search query')
-async def code(interaction: discord.Interaction, role_query: str):
+@app_commands.describe(role_query='Enter a role')
+async def assign_role(interaction: discord.Interaction, role_query: str):
+    await interaction.response.defer()
     role = discord.utils.get(interaction.guild.roles, name=role_query.strip())
     if role:
         if role not in interaction.user.roles:
             await interaction.user.add_roles(role)
-            await interaction.channel.send(f'{interaction.user.mention} is a {role}')
+            await interaction.followup.send(f'{interaction.user.mention} is a {role}')
         else:
-            await interaction.channel.send(f'You already have this role')
+            await interaction.followup.send(f'You already have this role')
     else:
-        await interaction.channel.send("Role doesn't exist")
+        await interaction.followup.send("Role doesn't exist")
 
+# Remove role
 @bot.tree.command(name='remove', description='Remove a role', guild=GUILD_ID)
-@app_commands.describe(role_query='Search query')
-async def code(interaction: discord.Interaction, role_query: str):
+@app_commands.describe(role_query='Enter a role')
+async def remove_role(interaction: discord.Interaction, role_query: str):
+    await interaction.response.defer()
     role = discord.utils.get(interaction.guild.roles, name=role_query.strip())
     if role:
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role)
-            await interaction.channel.send(f'{interaction.user.mention} is no longer a {role}')
+            await interaction.followup.send(f'{interaction.user.mention} is no longer a {role}')
         else:
-            await interaction.channel.send(f"You do not have that role")
+            await interaction.followup.send(f"You do not have that role")
     else:
-        await interaction.channel.send("Role doesn't exist")
-
-# Remove role      
-@bot.command()
-async def uncode(ctx):
-    role = discord.utils.get(ctx.guild.roles, name=coder_role)
-    if role:
-        await ctx.author.remove_roles(role)
-        await ctx.send(f'{ctx.author.mention} is no longer a {coder_role}')
-    else:
-        await ctx.send("Role doesn't exist")
-
-# Create a poll        
-@bot.command()
-async def poll(ctx, *, question):
-    embed = discord.Embed(title='New Poll', description=question)
-    poll_message = await ctx.send(embed=embed)
+        await interaction.followup.send("Role doesn't exist")
+    
+# Create a poll  
+@bot.tree.command(name='poll', description='Create a poll', guild=GUILD_ID)
+@app_commands.describe(question='Write your question')
+async def code(interaction: discord.Interaction, question: str):
+    embed = discord.Embed(title=question, description='⬇Vote here⬇')
+    await interaction.response.send_message(embed=embed)
+    poll_message = await interaction.original_response()
+    # Bot adds reactions to the poll
     await poll_message.add_reaction('👍')
     await poll_message.add_reaction('👎')
 
+# Get current date and time
+@bot.tree.command(name='datetime', description='Get current date and time', guild=GUILD_ID)
+async def get_datetime(interaction: discord.Interaction):
+    await interaction.response.defer()
+    now = datetime.now()
+    formatted_time = now.strftime("%H:%M %d-%m-%Y")
+    await interaction.followup.send(f'{formatted_time}')
+
+# Play a song or add it to the queue
 @bot.tree.command(name='play', description='Play a song or add it to the queue', guild=GUILD_ID)
 @app_commands.describe(song_query='Search query')
 async def play(interaction: discord.Interaction, song_query: str):
@@ -136,7 +142,8 @@ async def play(interaction: discord.Interaction, song_query: str):
         return
     
     voice_client = interaction.guild.voice_client
-
+    
+    # Bot connects to voice channel
     if voice_client is None:
         voice_client = await voice_channel.connect()
     elif voice_channel != voice_client.channel:
@@ -182,14 +189,17 @@ async def play(interaction: discord.Interaction, song_query: str):
     
     voice_client.play(source)
 
+# Skip current song
 @bot.tree.command(name='skip', description='Skip the current song', guild=GUILD_ID)
 async def skip(interaction: discord.Interaction):
+    await interaction.response.defer()
     if interaction.guild.voice_client and (interaction.guild.voice_client.is_playing() or interaction.guild.voice_client.is_paused()):
         interaction.guild.voice_client.stop()
-        await interaction.followup.send_message('Skipped the current song')
+        await interaction.followup.send('Skipped the current song')
     else:
-        await interaction.followup.send_message('Nothing to skip')
-        
+        await interaction.followup.send('Nothing to skip')
+
+# Pause the playback
 @bot.tree.command(name='pause', description='Pause the current song', guild=GUILD_ID)
 async def pause(interaction: discord.Interaction):
     voice_client = interaction.guild.voice_client
@@ -202,7 +212,8 @@ async def pause(interaction: discord.Interaction):
 
     voice_client.pause()
     await interaction.response.send_message('Song paused')
-    
+
+# Resume the song
 @bot.tree.command(name="resume", description="Resume the currently paused song", guild=GUILD_ID)
 async def resume(interaction: discord.Interaction):
     voice_client = interaction.guild.voice_client
@@ -218,7 +229,8 @@ async def resume(interaction: discord.Interaction):
     # Resume playback
     voice_client.resume()
     await interaction.response.send_message("Song resumed!")
-    
+
+# Stop the playback
 @bot.tree.command(name="stop", description="Stop playback and clear the queue", guild=GUILD_ID)
 async def stop(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -237,7 +249,7 @@ async def stop(interaction: discord.Interaction):
     if voice_client.is_playing() or voice_client.is_paused():
         voice_client.stop()
 
-    # (Optional) Disconnect from the channel
+    # Disconnect from the channel
     await interaction.followup.send("Music disconnected")
     
     await voice_client.disconnect()
@@ -266,6 +278,5 @@ async def play_next_song(voice_client, guild_id, channel):
         await voice_client.disconnect()
         SONG_QUEUES[guild_id] = deque()
         
-
 
 bot.run(DC_TOKEN, log_handler=handler, log_level=logging.DEBUG)
