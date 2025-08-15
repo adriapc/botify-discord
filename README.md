@@ -1,6 +1,6 @@
 # **BOTIFY** - DISCORD AI & MUSIC BOT 🤖🎧
 
-![botify](.\images\botify_banner.png)
+![botify](./images/botify_banner.png)
 
 Botify is a feature-rich Discord bot that combines OpenAI-powered conversation with music playback, server utilities, and role management.
 It can respond to chat messages with AI, play music from YouTube, manage polls, assign/remove roles, and more — all in one bot.
