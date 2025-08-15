@@ -85,7 +85,7 @@ async def on_message(message):
 @app_commands.describe(role_query='Enter a role')
 async def assign_role(interaction: discord.Interaction, role_query: str):
     await interaction.response.defer()
-    role = discord.utils.get(interaction.guild.roles, name=role_query.strip())
+    role = discord.utils.get(interaction.guild.roles, name=role_query.strip().lower())
     if role:
         if role not in interaction.user.roles:
             await interaction.user.add_roles(role)
@@ -100,7 +100,7 @@ async def assign_role(interaction: discord.Interaction, role_query: str):
 @app_commands.describe(role_query='Enter a role')
 async def remove_role(interaction: discord.Interaction, role_query: str):
     await interaction.response.defer()
-    role = discord.utils.get(interaction.guild.roles, name=role_query.strip())
+    role = discord.utils.get(interaction.guild.roles, name=role_query.strip().lower())
     if role:
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role)
@@ -127,7 +127,6 @@ async def get_datetime(interaction: discord.Interaction):
     await interaction.response.defer()
     now = datetime.now()
     formatted_time = now.strftime("%H:%M %d-%m-%Y")
-    print(interaction.user.roles)
     await interaction.followup.send(f'{formatted_time}')
 
 @bot.tree.command(name='clear-chat', description='Delete all messages in the channel', guild=GUILD_ID)
