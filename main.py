@@ -41,7 +41,9 @@ client = OpenAI(api_key=OPENAI_KEY)
 
 # Generate response with gpt-4o-mini
 def generate_response(msg):
-    instruction = '''You are an AI assistant, named Botify. Respond to the messages concretely, as short as possible'''
+    instruction = f'''You are an AI assistant, named Botify. 
+        You can play music if they are in a voice channel, by typing the following command: /play [song name]. 
+        Respond to the messages concretely, as short as possible. Today is {datetime.today()}'''
     body = client.responses.create(
         model="gpt-4o-mini",
         instructions=instruction,
@@ -112,7 +114,7 @@ async def remove_role(interaction: discord.Interaction, role_query: str):
 @bot.tree.command(name='poll', description='Create a poll', guild=GUILD_ID)
 @app_commands.describe(question='Write your question')
 async def code(interaction: discord.Interaction, question: str):
-    embed = discord.Embed(title=question, description='⬇Vote here⬇')
+    embed = discord.Embed(title=question, description='⬇Vote here⬇', color=discord.Color.purple())
     await interaction.response.send_message(embed=embed)
     poll_message = await interaction.original_response()
     # Bot adds reactions to the poll
@@ -194,7 +196,7 @@ async def skip(interaction: discord.Interaction):
     await interaction.response.defer()
     if interaction.guild.voice_client and (interaction.guild.voice_client.is_playing() or interaction.guild.voice_client.is_paused()):
         interaction.guild.voice_client.stop()
-        await interaction.followup.send('⏭Skipped the current song')
+        await interaction.followup.send('⏭ Skipped the current song')
     else:
         await interaction.followup.send('Nothing to skip')
 
@@ -227,7 +229,7 @@ async def resume(interaction: discord.Interaction):
     
     # Resume playback
     voice_client.resume()
-    await interaction.response.send_message("▶Song resumed")
+    await interaction.response.send_message("▶ Song resumed")
 
 # Stop the playback
 @bot.tree.command(name="stop", description="Stop playback and clear the queue", guild=GUILD_ID)
