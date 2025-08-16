@@ -6,6 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 import logging
 from dotenv import load_dotenv
+import platform
 from openai import OpenAI
 import os
 import yt_dlp
@@ -253,7 +254,8 @@ async def stop(interaction: discord.Interaction):
     await interaction.followup.send("Music disconnected")
     
     await voice_client.disconnect()
-    
+
+print(platform.system())   
     
 async def play_next_song(voice_client, guild_id, channel):
     if SONG_QUEUES[guild_id]:
@@ -263,8 +265,10 @@ async def play_next_song(voice_client, guild_id, channel):
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
         'options': '-vn -c:a libopus -b:a 96k',
         }
-    
-        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="bin\\ffmpeg\\ffmpeg.exe")
+        
+        ffmpeg_path = "bin\\ffmpeg\\ffmpeg.exe" if platform.system() == "Windows" else "bin/ffmpeg/ffmpeg"
+
+        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable=ffmpeg_path)
 
         def after_play(error):
             if error:
