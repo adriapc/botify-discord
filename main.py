@@ -9,7 +9,10 @@ from dotenv import load_dotenv
 import platform
 from openai import OpenAI
 import os
+import threading
 import yt_dlp
+from aiohttp import web
+
 
 load_dotenv()
 
@@ -267,7 +270,12 @@ async def play_next_song(voice_client, guild_id, channel):
         'options': '-vn -c:a libopus -b:a 96k',
         }
         
-        ffmpeg_path = "bin\\ffmpeg\\ffmpeg.exe" if platform.system() == "Windows" else "bin/ffmpeg/ffmpeg"
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        if platform.system() == "Windows":
+            ffmpeg_path = os.path.join(base_dir, "bin", "ffmpeg", "ffmpeg.exe")
+        else:
+            ffmpeg_path = os.path.join(base_dir, "bin", "ffmpeg", "ffmpeg")
 
         source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable=ffmpeg_path)
 
@@ -283,5 +291,14 @@ async def play_next_song(voice_client, guild_id, channel):
         await voice_client.disconnect()
         SONG_QUEUES[guild_id] = deque()
         
+async def handle(request):
+    return web.Response(text="Botify is alive!")
+
+def run_webserver():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    web.run_app(app, port=10000)
+
+threading.Thread(target=run_webserver, daemon=True).start()
 
 bot.run(DC_TOKEN, log_handler=handler, log_level=logging.DEBUG)
