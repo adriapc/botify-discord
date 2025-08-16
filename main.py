@@ -163,6 +163,7 @@ async def play(interaction: discord.Interaction, song_query: str):
         'noplaylist': True,
         'youtube_include_dash_manifest': False,
         'youtube_include_hls_manifest': False,
+        'cookiefile': 'cookies.txt',
     }
 
     query = 'ytsearch1: ' + song_query
