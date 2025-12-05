@@ -297,7 +297,7 @@ async def handle(request):
 def run_webserver():
     app = web.Application()
     app.router.add_get("/", handle)
-    web.run_app(app, port=10000)
+    web.run_app(app, port=10000, handle_signals=False)
 
 threading.Thread(target=run_webserver, daemon=True).start()
 
